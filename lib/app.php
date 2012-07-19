@@ -24,14 +24,101 @@ namespace Gig;
 * uses command line variables and a configuration file to do generation of code
 */
 class App {
-// set up PHP environment
-// big memory limit
-// big time limit
-// error reporting
 
-// set up includes for all files
+    /**
+    * cwd when script was started
+    *
+    * @var string
+    */
+    protected $cwd;
 
-// parse args
+    /**
+    * autoload directory information
+    *
+    * @var array
+    */
+    protected $dirs;
+
+    /**
+    * Does setup work
+    * parses options, etc
+    *
+    * @return void
+    */
+    public function __construct($argv, $argc) {
+        $this->setupErrorHandling();
+        $this->setupPhpEnv();
+        $this->setupAutoload();
+        $this->parseArgs($argv, $argc);
+    }
+
+    /**
+    * Runs the application
+    *
+    * @return void
+    */
+    public function run() {
+        var_dump($this);
+    }
+
+    /**
+    * Sets up our PHP environment
+    *
+    * @return void
+    */
+    protected function setupPHPEnv() {
+        set_time_limit(300);
+        ini_set('memory_limit','-1');
+
+        if (ini_get('date.timezone') == '') {
+            date_default_timezone_set('UTC');
+        }
+
+        $this->cwd = getcwd();
+    }
+
+    /**
+    * Sets up our error handling
+    *
+    * @return void
+    */
+    protected function setupErrorHandling() {
+        error_reporting(-1);
+        // set exception handler
+        // set error handler
+    }
+
+    /**
+    * Sets up our autoloading for the system
+    *
+    * @return void
+    */
+    protected function setupAutoload() {
+        $this->dirs['lib'] = __DIR__;
+        $this->dirs['config-parsers'] = realpath(basename(__DIR__) . '/../') . DIRECTORY_SEPARATOR
+            . 'parsers' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR;
+        $this->dirs['spec-parsers'] = realpath(basename(__DIR__) . '/../') . DIRECTORY_SEPARATOR
+            . 'parsers' . DIRECTORY_SEPARATOR . 'spec' . DIRECTORY_SEPARATOR;
+        spl_autoload_register(array($this, 'autoload'));
+    }
+
+    /**
+    * Our autoload callback
+    *
+    * @return void
+    */
+    protected function autoload($class) {
+    }
+
+    /**
+    * Parses our passed arguments
+    *
+    * @return void
+    */
+    protected function parseArgs($argv, $argc) {
+        
+    }
+
 // application options
 // 1. help
 // 2. version

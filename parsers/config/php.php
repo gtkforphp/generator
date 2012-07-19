@@ -1,6 +1,6 @@
 <?php
 /**
-* getopt.php - Gig\Getopt command line arguments parser helper
+* php.php - Gig\Parsers\Config\Php class for php array "parser"
 *
 * This is released under the MIT, see LICENSE for details
 *
@@ -10,19 +10,18 @@
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
 * @package gig
-* @subpackage lib
+* @subpackage config-parser
 */
 
 /**
-* Namespace for basic gig stuff
+* Namespace for config parsers
 */
-namespace Gig;
+namespace Gig\Parsers\Config;
 
 /**
-* Getopt - handles long and short options for the GIG script
+* Php - doesn't actually do any parsing
 *
-* because of the way getopt() in PHP works, this does it's own
-* parsing so we can error on stuff
+* Really a "dummy" class for the most basic parser format
 */
-class Getopt {
+class Php {
 }

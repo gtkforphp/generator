@@ -105,5 +105,5 @@ include __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'app.php';
 /**
 * Create and run our application
 */
-$app = new Gig\App($argc, $argv);
+$app = new Gig\App($argv, $argc);
 $app->run();
