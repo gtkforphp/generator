@@ -79,7 +79,8 @@ class ExtWriter extends Cli {
         // load our config - maybe
         $config = $this->loadConfig($filename);
 
-        
+        // hurray, we have config!
+        $spec = $this->loadSpec($config);
     }
 
     /**
@@ -188,7 +189,43 @@ class ExtWriter extends Cli {
         $this->printMessage('Parser loaded for config type ' . $ext);
 
         $config = new $class($path);
-        $values = $config->parse($filename);
+        return $config->parse($filename);
+    }
+
+    /**
+    * Attempts to create and load a spec parser for the requested module
+    *
+    * @param string $filename name of config file to load
+    * @return object instanceof specparser
+    */
+    protected function loadSpec($config) {
+
+        // parser type detection
+        if (isset($config['specification']['type'])) {
+            $type = $config['specification']['type'];
+        } else {
+            trigger_error('Specification type missing from configuration file', E_USER_ERROR);
+        }
+
+        $this->printMessage('Specification detected as type ' . $type, 2);
+
+        // Parser for spec should be in parsers/spec/$type.php
+        $parser = realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR . 'parsers' . DIRECTORY_SEPARATOR . 'spec'
+                . DIRECTORY_SEPARATOR . strtolower($type) . '.php';
+        $this->printMessage('Trying to load parser ' . $parser, 2);
+        if (!file_exists($parser)) {
+            trigger_error('Specification parser for ' . $type . ' could not be loaded', E_USER_ERROR);
+        }
+
+        $class = 'G\Generator\SpecParser\\' . ucfirst(strtolower($type));
+        $this->printMessage('Trying to load class ' . $class, 2);
+        include $parser;
+        if (!class_exists($class)) {
+            trigger_error('Specification parser class ' . $class . ' could not be found', E_USER_ERROR);
+        }
+        $this->printMessage('Parser loaded for spec type ' . $type);
+
+        return new $class($config['specification']);
     }
 
     /**
