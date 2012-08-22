@@ -1,27 +1,47 @@
-#GIG - Gobject Introspection Generator
-##Introduction
-A collection of scripts for generating or updating a PHP extension from a specification in multiple formats
+G\Generator
+=============
+This is a collection of scripts for generating or updating a PHP extension to wrap a C library
 
-##Features
-Gig is highly configuratble and extensible.  An extension will need a configuration file and specification
-information.  There is a template system for C files for generation differences, the default template generates
-only for PHP 5.4 at present.  GIG supports multiple formats available for extension specification
-including Gobject Introspection xml, and Gobject Introspection compiled.  Gig supports multiple formats for
-extension configuration.  Gig will generate appropriate build information, files, tests and 
-docbook documentation.  Gig supports version based declaration and deprecation.  Gig also upports custom function
-declarations as "overrides" at generation time, but leaves changes alone during library updates.
-Besides initial generation gig also supports updating a previously compiled extension.
+You can send comments, patches, questions [here on github](https://github.com/gtkforphp/generator/issues)
 
-##Usage
-Gig is a PHP 5.4 cli application.  Besides the basic extensions it requires  
+This is still an experimental extension.
 
-{
-gig 1.0.0-dev, Copyright (c) 2012 Elizabeth M Smith
+Features
+===
+The generator is designed to be configurable and extendible.  To create an extension you need two things,
+a specification for the extension in a format for which the generator has a parser, and a configuration file
+for the extension in a format the generator can read.
+
+There is a template system for C files for generation differences, the default template generates
+only for PHP 5.4 at present - additional templates are welcome.
+
+G\Generator can support multiple formats for available for extension specification.  Currently the only
+specification available requires the [G\Introspection](https://github.com/gtkforphp/gintrospection) extension 
+which can read typelib files created by Gobject Introspection tools.  Additional parsers for specifications are
+welcome.
+
+G\Generator can currently read configuration files in .ini format.  Additional parsers for configuration files
+are welcome.
+
+G\Generator is designed to generate C files and headers, tests, and even docbook documentation.
+
+G\Generator supports version based declaration and deprecation, and ignoring
+items. G\Generator also supports custom function declarations as "overrides" at
+generation time, but leaves changes alone during library updates. Besides
+initial generation it also supports updating a previously compiled extension
+with new or missing definitions.
+
+Usage
+=====
+ggen is a PHP 5.4 cli application
+
+```
+ggen 1.0.0-dev, Copyright (c) 2012 Elizabeth M Smith
 
 Usage:
 
-gig [-h] [-v] [-q] [--lint] [--extname=name] [--proto=file] [--skel=dir] [--stubs=file] 
-  [--no-help] [--xml[=file]] [--full-xml] [--function=proto] [config.type]
+ggen [-h] [-v] [-q] [-l] [-u] [-n]
+  [--extension] [--test] [--docbook] [--stubs] config.filetype
 
   -h|--help          this message
   -v|--version       show version info
@@ -37,12 +57,8 @@ gig [-h] [-v] [-q] [--lint] [--extname=name] [--proto=file] [--skel=dir] [--stub
                      is empty
 
   the following options control what is generated or updated
-  --extname=module   module is the name of your extension 
-  --test       file contains prototypes of functions to create
-  --docbook              generate xml documentation to be added to phpdoc-cvs
-}
-
-##Configuration Format
-By default Gig expects an array of information for configuration of the extension.  Because the base format
-is a simple array, adding any kind of parser can be added for configuration files.  Configuration parsers
-are chosen by 
+  --extension       update or generate only extension files
+  --stubs           only generate stubs, do not fill out anything
+  --test            file contains prototypes of functions to create
+  --docbook         generate xml documentation to be added to phpdoc-cvs
+```

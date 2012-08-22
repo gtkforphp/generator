@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
-* gig.php - command line tool for exension generation
+* ggen.php - command line tool for exension generation
 *
 * This is released under the MIT, see LICENSE for details
 *
@@ -10,8 +10,8 @@
 * @link http://gtkforphp.net
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
-* @package gig
-* @subpackage lib
+* @package G\Generator
+* @subpackage cli
 */
 
 /**
@@ -26,6 +26,10 @@
  * 2. PHP SAPI (MUST be cli)
  * 3. PHP extensions (spl, date, pcre, reflection and standard)
  * 4. argv/argc
+ *
+ * Note this file doesn't use namespaces until after the version check
+ * or pollute the global namespace  Should run on any 5+ version of PHP...
+ * and bail properly
  */
 
 if (version_compare(PHP_VERSION, "5.4.0", "<")) {
@@ -34,7 +38,7 @@ if (version_compare(PHP_VERSION, "5.4.0", "<")) {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| GIG requires PHP 5.40 or higher to run.  Please update to |
+| ggen requires PHP 5.40 or higher to run.  Please update to |
 | a more recent PHP version to continue.                    |
 +-----------------------------------------------------------+
 
@@ -49,7 +53,7 @@ if (PHP_SAPI != 'cli') {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| GIG must be run using the php cli.  On windows this is    |
+| ggen must be run using the php cli.  On windows this is    |
 | php.exe or php-win.exe.  On linux systems you may need to |
 | install a package php5-cli or something similar.          |
 +-----------------------------------------------------------+
@@ -69,7 +73,7 @@ if (!extension_loaded('reflection') ||
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| GIG requires spl, date, pcre, reflection and standard to  |
+| ggen requires spl, date, pcre, reflection and standard to  |
 | be loaded in order to run.  These extensions are normally |
 | built into PHP by default but at least one is missing.    |
 | Please rebuild your PHP to include these extensions, or   |
@@ -87,7 +91,7 @@ if (!isset($argv) || !isset($argc)) {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| GIG requires both argv and argc (command line argument    |
+| ggen requires both argv and argc (command line argument    |
 | information) to be available in order to run.  Please     |
 | enable register_argv_argc in your command line php.ini    |
 +-----------------------------------------------------------+
@@ -98,12 +102,13 @@ BAD_ARGV_ERROR
 }
 
 /**
-* This will make Gig\App available, all other classes are autoloaded
+* Include all our classes with an include all file
+* does not load any config or spec parsers
 */
-include __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'app.php';
+include __DIR__ . DIRECTORY_SEPARATOR . 'include.php';
 
 /**
 * Create and run our application
 */
-$app = new Gig\App($argv, $argc);
+$app = new G\Generator\ExtWriter($argv, $argc);
 $app->run();
