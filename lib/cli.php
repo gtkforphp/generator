@@ -43,6 +43,16 @@ abstract class Cli {
     protected $opt;
 
     /**
+    * message value to show
+    * default is 1 (basic messages)
+    * 2 is all messages (verbose)
+    * 0 is no messages (silent)
+    * 
+    * @var int
+    */
+    protected $messages = 1;
+
+    /**
     * Does setup work
     * parses options, etc
     *
@@ -92,11 +102,15 @@ abstract class Cli {
      * print a wrapped message to the screen
      *
      * @param string $message message to display
+     * @param int $level 1 or 2 (for regular or verbose)
      * @return void
      */
-    public function printMessage($message) {
+    public function printMessage($message, $level = 1) {
+        if ($this->messages < $level) {
+            return;
+        }
         if (strlen($message) > 78) {
-            echo wordwrap($message, 78, PHP_EOL, true);
+            echo wordwrap($message, 78, PHP_EOL, true), PHP_EOL;
         } else {
             echo $message . PHP_EOL;
         }
@@ -126,7 +140,36 @@ abstract class Cli {
     */
     protected function setupErrorHandling() {
         error_reporting(-1);
-        // set exception handler
-        // set error handler
+        // TODO: set exception handler
+        set_error_handler(array($this, 'error'));
+    }
+
+    /**
+     * pretty print PHP error handler
+     *
+     * @param string $message message to display
+     * @return void
+     */
+    public function error( $errno, $message, $errfile, $errline, $errcontext) {
+        switch ($errno) {
+            case E_USER_ERROR:
+            case E_ERROR:
+                echo 'ERROR: cannot continue!', PHP_EOL;
+                if (strlen($message) > 78) {
+                    echo wordwrap($message, 78, PHP_EOL, true);
+                } else {
+                    echo $message . PHP_EOL;
+                }
+
+               exit($errno);
+            case E_USER_WARNING:
+            case E_WARNING:
+                $this->printMessage($message, 1);
+                return true;
+            case E_USER_NOTICE:
+            case E_NOTICE:
+                $this->printMessage($message, 2);
+                return true;
+        }
     }
 }

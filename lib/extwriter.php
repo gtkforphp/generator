@@ -43,8 +43,10 @@ class ExtWriter extends Cli {
         $this->opt->setOptions(
             array(
                 array('h', 'help', 'Usage instructions'),
-                array('v', 'version', 'Show version information'),
+
+                array('v', 'verbose', 'Show version information'),
                 array('q', 'quiet', 'Suppress all output'),
+
                 array('l:', 'log:', 'Log to file provided --log=logfile'),
 
                 array('c', 'check', 'Lint check config and specification files'),
@@ -76,6 +78,8 @@ class ExtWriter extends Cli {
 
         // load our config - maybe
         $config = $this->loadConfig($filename);
+
+        
     }
 
     /**
@@ -89,11 +93,47 @@ class ExtWriter extends Cli {
             switch($name) {
                 case 'h':
                 case 'help':
-                    return $this->opt->showHelp(' config_filename.type',
-                                                'ggen ' . self::VERSION . ', Copyright (c) 2012 Elizabeth M Smith');
+                    $this->showHeader();
+                    return $this->opt->showHelp(' config_filename.type');
+
                 case 'v':
-                case 'version':
-                    return $this->showVersion();
+                case 'verbose':
+                    $this->messages = 2;
+                    break;
+                case 'q':
+                case 'quiet':
+                    if ($this->messages > 1) {
+                        $this->showHeader();
+                        trigger_error('You cannot use --verbose and --quiet at the same time', E_USER_ERROR);
+                    }
+                    $this->messages = 0;
+                    break;
+            }
+        }
+
+        $this->showHeader();
+
+        foreach($options as $name => $value) {
+            switch($name) {
+                case 'l':
+                case 'log':
+                    // TODO: making logging work... $this->setLogFile($value);
+                    break;
+
+                case 'c':
+                case 'check':
+                    // TODO: do the lint
+                    break;
+
+                case 'u':
+                case 'update':
+                    // TODO: force update
+                    break;
+
+                case 'n':
+                case 'new':
+                    // TODO: force new
+                    break;
             }
         }
     }
@@ -108,34 +148,57 @@ class ExtWriter extends Cli {
     protected function loadConfig($filename) {
 
         // look for file as absolute path
+        $this->printMessage('Attempting to load filename ' . $filename, 2);
         $path = realpath($filename);
+        $this->printMessage('Looking in ' . $path, 2);
         if (!file_exists($path)) {
             // look for file in cwd registered
             $path = realpath($this->cwd . DIRECTORY_SEPARATOR . $filename);
+            $this->printMessage('Looking in ' . $path, 2);
             if (!file_exists($path)) {
                 // look for file in include path using stream_resolve_include_path
                 $path = stream_resolve_include_path($filename);
+                $this->printMessage('Looking in ' . $path, 2);
                 if (!file_exists($path)) {
                     trigger_error('Config file ' . $filename . ' could not be loaded', E_USER_ERROR);
                 }
             }
         }
         // path should now be a shiny absolute path to a file
+        $this->printMessage('Loading configuration from ' . $path);
+
+        // parser type detection
         $ext = pathinfo ($filename, PATHINFO_EXTENSION);
+        $this->printMessage('Config detected as type ' . $ext, 2);
 
         // Parser for config should be in parsers/config/$ext.php
         $parser = realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR . 'parsers' . DIRECTORY_SEPARATOR . 'config'
                 . DIRECTORY_SEPARATOR . strtolower($ext) . '.php';
-        $class = 'G\Generator\ConfigParser\\' . ucfirst(strtolower($ext));
+        $this->printMessage('Trying to load parser ' . $parser, 2);
         if (!file_exists($parser)) {
             trigger_error('Configuration parser for ' . $ext . ' could not be loaded', E_USER_ERROR);
         }
+
+        $class = 'G\Generator\ConfigParser\\' . ucfirst(strtolower($ext));
+        $this->printMessage('Trying to load class ' . $class, 2);
         include $parser;
         if (!class_exists($class)) {
             trigger_error('Configuration parser class ' . $class . ' could not be found', E_USER_ERROR);
         }
+        $this->printMessage('Parser loaded for config type ' . $ext);
 
         $config = new $class($path);
         $values = $config->parse($filename);
+    }
+
+    /**
+    * Echoes out version information to console
+    *
+    * @return void
+    */
+    protected function showHeader() {
+        if($this->messages > 0) {
+            echo 'ggen ' . self::VERSION . ', Copyright (c) 2012 Elizabeth M Smith', PHP_EOL, PHP_EOL;
+        }
     }
 }

@@ -172,13 +172,8 @@ class Getopt {
      *
      * @return array
      */
-    public function showHelp($option = ' <option>', $header = null) {
-        if ($header) {
-            $output = $header . PHP_EOL . PHP_EOL;
-        } else {
-            $output = '';
-        }
-        $output .= 'Usage: ' . $this->rawArgv[0] . $option . PHP_EOL;
+    public function showHelp($option = ' <option>') {
+        $output = 'Usage: ' . $this->rawArgv[0] . $option . PHP_EOL;
         $args = array();
         $longest = 0;
         $position = 0;
