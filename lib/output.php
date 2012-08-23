@@ -133,6 +133,7 @@ class Output {
 
         $vars['class'] = $name;
         $vars['class_lc'] = strtolower($name);
+        $vars['methods'] = $info['methods'];
 
         return $this->generate($vars,
                         $this->templates . 'class.c.tpl',
