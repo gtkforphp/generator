@@ -13,11 +13,13 @@ a specification for the extension in a format for which the generator has a pars
 for the extension in a format the generator can read.
 
 There is a template system for C files for generation differences, the default template generates
-only for PHP 5.4 at present - additional templates are welcome.
+only for PHP 5.4 gtkforphp at present - additional templates are welcome.
 
 G\Generator can support multiple formats for available for extension specification.  Currently the only
-specification available requires the [G\Introspection](https://github.com/gtkforphp/gintrospection) extension 
-which can read typelib files created by Gobject Introspection tools.  Additional parsers for specifications are
+specification can read xml in GIR format.  There were originally plans to use the G\Introspection extension
+as well.  However Pygobject specific additions to the way typelibs are generated that explicitly exlude
+symbols (that are necessary for the generator to work) mean that it will be impossible to use prebuilt
+typelibs, and so no more G\Introspection support is planned.  Additional parsers for specifications are
 welcome.
 
 G\Generator can currently read configuration files in .ini format.  Additional parsers for configuration files

@@ -14,7 +14,7 @@ TODO
 Far Future
 ===
  1. another app or flag for config generation
- 1. spec parser for other formats - xml?
+ 1. spec parser for other formats
  1. another app or flag for scanner for other formats? gintrospection based scanner?
 
 // 5. changes in behavior
