@@ -15,7 +15,6 @@
   | Author: Elizabeth M Smith <auroraeosrose@gmail.com>                  |
   +----------------------------------------------------------------------+
 */
-
 #include "php_glib.h"
 
 zend_class_entry *ce_glib_asciitype;

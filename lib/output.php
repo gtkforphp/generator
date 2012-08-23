@@ -108,8 +108,10 @@ class Output {
     public function writeModule($spec) {
         $classes = array();
 
-        // each class gets it's own file class.c
-        // each class.c file has a boilerplate template with an init
+        foreach($spec['classes'] as $name => $info) {
+            $this->writeClassFile($name, $info);
+            $classes[] = $name;
+        }
 
         // check for enums
         if (isset($spec['enums'])) {
@@ -122,21 +124,30 @@ class Output {
     }
 
     /**
+    * Class File
+    *
+    * @return void
+    */
+    protected function writeClassFile($name, $info) {
+        $vars = array();
+
+        $vars['class'] = $name;
+        $vars['class_lc'] = strtolower($name);
+
+        return $this->generate($vars,
+                        $this->templates . 'class.c.tpl',
+                        $this->location . strtolower($name) . '.c');
+    }
+
+    /**
     * Enum File
     *
     * @return void
     */
     protected function writeEnumFile($enums) {
-        $authors = $this->authors;
-        $module = strtolower($this->module);
-        $module_uc = strtoupper($this->module);
-
-        ob_start();
-        include $this->templates . 'enum.c.tpl';
-        $file = ob_get_clean();
-        $filename = $this->location . 'enums.c';
-
-        file_put_contents($filename, $file);
+        return $this->generate(array('enums' => $enums),
+                        $this->templates . 'enum.c.tpl',
+                        $filename = $this->location . 'enums.c');
     }
 
     /**
@@ -144,25 +155,13 @@ class Output {
     *
     * @return void
     */
-    protected function writeModuleFile($raw_classes) {
-        $year = date('Y');
-        $authors = $this->authors;
-        $module = strtolower($this->module);
-        $module_uc = strtoupper($this->module);
-        $module_pretty = $this->module;
-        $generator_version = \G\Generator\ExtWriter::VERSION;
-        $classes = array();
-        foreach($raw_classes as $name => $def) {
-            $classes[] = $this->mangleClassName($name);
-        }
-        unset($raw_classes, $name, $def);
+    protected function writeModuleFile($classes) {
 
-        ob_start();
-        include $this->templates . 'module.c.tpl';
-        $file = ob_get_clean();
-        $filename = $this->location . 'php_' . $module . '.c';
-
-        file_put_contents($filename, $file);
+        return $this->generate(
+            array('generator_version' => \G\Generator\ExtWriter::VERSION,
+                  'classes' => $classes),
+            $this->templates . 'module.c.tpl',
+            $this->location . 'php_'. strtolower($this->module) . '.c');
     }
 
     /**
@@ -185,11 +184,37 @@ class Output {
     }
 
     /**
-    * TODO: make this do something
+    * Returns array of basic args that is needed in all templates
     *
-    * @return void
+    * @return array
     */
-    protected function mangleClassname($name) {
-        return $name;
+    protected function getGlobals() {
+        return array(
+                'authors' => $this->authors,
+                'module' => $this->module,
+                'module_lc' => strtolower($this->module),
+                'module_uc' => strtoupper($this->module),
+                'year' => date('Y'),
+                    );
+    }
+
+
+    /**
+    * Generate the file
+    *
+    * @params array $vars to extract for template
+    * @params string $template absolute path to template
+    * @params string $filename absolute path to filename
+    * @return boolean
+    */
+    protected function generate($vars, $template, $filename) {
+        $vars += $this->getGlobals();
+        extract($vars);
+
+        ob_start();
+        include $template;
+        $file = ob_get_clean();
+
+        return file_put_contents($filename, $file);
     }
 }
