@@ -18,5 +18,6 @@ $libpath = __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR;
 include $libpath . 'getopt.php';
 include $libpath . 'cli.php';
 include $libpath . 'extwriter.php';
+include $libpath . 'output.php';
 
 unset($libpath);

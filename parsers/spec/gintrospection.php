@@ -25,6 +25,24 @@ namespace G\Generator\SpecParser;
 class Gintrospection {
 
     /**
+    * our repository
+    * @var object
+    */
+    protected $repository;
+
+    /**
+    * namespace to modularize
+    * @var string
+    */
+    protected $namespace;
+
+    /**
+    * version to modularize
+    * @var string
+    */
+    protected $version;
+
+    /**
     * Checks for the extension and attempts to require the proper typelib
     *
     * @return void
@@ -47,5 +65,46 @@ class Gintrospection {
 
         $this->repository = \G\Introspection\Repository::getDefault();
         $this->repository->require($namespace, $version);
+        $this->namespace = $namespace;
+        $this->version = $version;
+    }
+
+    /**
+    * Returns an array? of information about the extension specification?
+    *
+    * @return void
+    */
+    public function parse() {
+        $module = array('enums' => array(), 'classes' => array());
+        $typelibs = $this->repository->getInfos($this->namespace);
+
+        foreach($typelibs as $info) {
+            if($info instanceof \G\Introspection\EnumInfo) {
+                $enum = array();
+                $values = $info->getValues();
+                foreach($values as $item) {
+                    $enum[$item->getName()] = $item->getAttribute('c:identifier');
+                }
+                $module['enums'][$info->getName()] = $enum;
+                unset($enum, $values, $item);
+            } elseif (($info instanceof \G\Introspection\StructInfo) ||
+                     ($info instanceof \G\Introspection\UnionInfo)) {
+                $class = array('methods' => array(), 'properties' => array());
+                $methods = $info->getMethods();
+                foreach($methods as $method) {
+                    $class['methods'][] = $method->getName();
+                }
+                $fields = $info->getFields();
+                foreach($fields as $field) {
+                    $class['fields'][] = $field->getName();
+                }
+
+                $module['classes'][$info->getName()] = $class;
+                unset($class, $fields, $field, $methods, $method);
+            }
+        }
+        unset($typelibs, $info);
+
+        return $module;
     }
 }

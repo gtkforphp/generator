@@ -21,14 +21,12 @@ Far Future
 //    3. actual output location for generation
 //    4. logging behavior/location
 // 6. do generation
-//     4.setup specification
-//       1. spec format and location
+
+set up writing
 //       2. templates format and location
 //       3. what to generate
-//    2. parse specification
-//     1. choose and load parser format
-//     2. parse into array/load
-//     3. format check
+
+
 //   3.a. new - writing
 //     1. using spec data, write C files
 //     2. using spec data, write test files

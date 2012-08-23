@@ -79,8 +79,13 @@ class ExtWriter extends Cli {
         // load our config - maybe
         $config = $this->loadConfig($filename);
 
-        // hurray, we have config!
+        // load our spec file
         $spec = $this->loadSpec($config);
+
+        // load our output mechanism
+        $output = $this->loadWriter($config);
+
+        $output->writeModule($spec);
     }
 
     /**
@@ -225,7 +230,24 @@ class ExtWriter extends Cli {
         }
         $this->printMessage('Parser loaded for spec type ' . $type);
 
-        return new $class($config['specification']);
+        $spec = new $class($config['specification']);
+        return $spec->parse();
+    }
+
+    /**
+    * Starts up a writer instance to use to output our parsed information
+    *
+    * @param array $config configuration values
+    * @return object instanceof writer
+    */
+    protected function loadWriter($config) {
+
+        // writer configuration information
+        if (!isset($config['output'])) {
+            trigger_error('Writer output settings missing from configuration file', E_USER_ERROR);
+        }
+
+        return new Output($config['output']);
     }
 
     /**
