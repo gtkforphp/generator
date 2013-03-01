@@ -33,6 +33,13 @@ class Extension extends Cli {
     const VERSION = '0.1.0-dev';
 
     /**
+    * the path to the location of the config file, this is used to
+    * look for assets for generation in the same dir
+    * @var string
+    */
+    protected $configpath;
+
+    /**
     * Does setup work
     * parses options, etc
     *
@@ -85,9 +92,10 @@ class Extension extends Cli {
         $spec = $this->loadSpec($config);
 
         // load our output mechanism
-        $output = $this->loadWriter($config);
+        $output = $this->loadOutput($config);
 
-        $output->writeModule($spec);
+        // TODO: decide what to output here
+        $output->writeNewExtension($spec);
     }
 
     /**
@@ -194,9 +202,9 @@ class Extension extends Cli {
             trigger_error('Configuration parser class ' . $class . ' could not be found', E_USER_ERROR);
         }
         $this->printMessage('Parser loaded for config type ' . $ext);
+        $this->configpath = dirname($path);
 
-        $config = new $class($path);
-        return $config->parse($filename);
+        return new $class($path);
     }
 
     /**
@@ -231,17 +239,16 @@ class Extension extends Cli {
         }
         $this->printMessage('Parser loaded for spec type ' . $type);
 
-        $spec = new $class($config['specification']);
-        return $spec->parse();
+        return new $class($config['specification'], $this->configpath);
     }
 
     /**
-    * Starts up a writer instance to use to output our parsed information
+    * Starts up an instance to use to output our parsed information
     *
     * @param array $config configuration values
     * @return object instanceof writer
     */
-    protected function loadWriter($config) {
+    protected function loadOutput($config) {
 
         // writer configuration information
         if (!isset($config['output'])) {

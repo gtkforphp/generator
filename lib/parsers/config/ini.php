@@ -17,12 +17,13 @@
 * Namespace for the tool
 */
 namespace G\Generator\Config;
+use ArrayObject;
 
 /**
 * "parses" ini files into the appropriate PHP array
 * from .ini file configuration
 */
-class Ini {
+class Ini extends ArrayObject {
 
     /**
     * absolute path to ini file
@@ -41,20 +42,13 @@ class Ini {
             trigger_error('Ini file ' . $filename . ' could not be loaded', E_USER_ERROR);
         }
         $this->filename = $filename;
-    }
 
-    /**
-    * Does setup work
-    * parses options, etc
-    *
-    * @return void
-    */
-    public function parse() {
         $base = parse_ini_file($this->filename, true, INI_SCANNER_RAW);
         if ($base === false) {
             trigger_error('Ini file ' . $this->filename . ' could not be parsed', E_USER_ERROR);
         }
         // TODO: merge with defaults
-        return $base;
+
+        parent::__construct($base);
     }
 }
