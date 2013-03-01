@@ -5,8 +5,8 @@
 *
 * This is released under the MIT, see LICENSE for details
 *
-* @author Elizabeth M Smith <auroraeosrose@php.net>
-* @copyright Elizabeth M Smith (c) 2012
+* @author Elizabeth M Smith <auroraeosrose@gmail.com>
+* @copyright Elizabeth M Smith (c) 2012-2013
 * @link http://gtkforphp.net
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
@@ -19,7 +19,7 @@
  *
  * There are a few requirements for the PHP environment that this
  * script needs in order to run.  Fatal errors will be output to
- * stderr if this stuff doesnt' work
+ * stderr if this stuff doesn't' work
  *
  * Current sanity checks
  * 1. PHP version (5.4)
@@ -27,9 +27,8 @@
  * 3. PHP extensions (spl, date, pcre, reflection and standard)
  * 4. argv/argc
  *
- * Note this file doesn't use namespaces until after the version check
- * or pollute the global namespace  Should run on any 5+ version of PHP...
- * and bail properly
+ * Note this file doesn't use namespaces but instead includes the actual run file
+ * Should run on any 5+ version of PHP...and bail properly
  */
 
 if (version_compare(PHP_VERSION, "5.4.0", "<")) {
@@ -38,8 +37,8 @@ if (version_compare(PHP_VERSION, "5.4.0", "<")) {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| ggen requires PHP 5.40 or higher to run.  Please update to |
-| a more recent PHP version to continue.                    |
+| ggen requires PHP 5.4.0 or higher to run.  Please update  |
+| to a more recent PHP version to continue.                 |
 +-----------------------------------------------------------+
 
 BAD_PHP_ERROR
@@ -53,7 +52,7 @@ if (PHP_SAPI != 'cli') {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| ggen must be run using the php cli.  On windows this is    |
+| ggen must be run using the php cli.  On windows this is   |
 | php.exe or php-win.exe.  On linux systems you may need to |
 | install a package php5-cli or something similar.          |
 +-----------------------------------------------------------+
@@ -73,7 +72,7 @@ if (!extension_loaded('reflection') ||
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| ggen requires spl, date, pcre, reflection and standard to  |
+| ggen requires spl, date, pcre, reflection and standard to |
 | be loaded in order to run.  These extensions are normally |
 | built into PHP by default but at least one is missing.    |
 | Please rebuild your PHP to include these extensions, or   |
@@ -91,7 +90,7 @@ if (!isset($argv) || !isset($argc)) {
 
 +-----------------------------------------------------------+
 |                       ! ERROR !                           |
-| ggen requires both argv and argc (command line argument    |
+| ggen requires both argv and argc (command line argument   |
 | information) to be available in order to run.  Please     |
 | enable register_argv_argc in your command line php.ini    |
 +-----------------------------------------------------------+
@@ -103,12 +102,9 @@ BAD_ARGV_ERROR
 
 /**
 * Include all our classes with an include all file
-* does not load any config or spec parsers
+* Run the extension tool with a run file
 */
-include __DIR__ . DIRECTORY_SEPARATOR . 'include.php';
+define('G_GEN_LIBPATH', __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR, true);
 
-/**
-* Create and run our application
-*/
-$app = new G\Generator\ExtWriter($argv, $argc);
-$app->run();
+include __DIR__ . DIRECTORY_SEPARATOR . 'include.php';
+include __DIR__ . DIRECTORY_SEPARATOR . 'run.php';

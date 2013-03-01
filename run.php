@@ -1,6 +1,9 @@
 <?php
 /**
-* include.php - "include all" file for the application
+* run.php - actually runs the application
+*
+* We use this instead of ggen itself so if the PHP version is too old
+* we don't parse error bomb on startup
 *
 * This is released under the MIT, see LICENSE for details
 *
@@ -13,7 +16,8 @@
 * @subpackage cli
 */
 
-include G_GEN_LIBPATH . 'getopt.php';
-include G_GEN_LIBPATH . 'cli.php';
-include G_GEN_LIBPATH . 'extension.php';
-include G_GEN_LIBPATH . 'output.php';
+/**
+* Create and run our application
+*/
+$app = new G\Generator\Extension($argv, $argc);
+$app->run();
