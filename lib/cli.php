@@ -4,12 +4,12 @@
 *
 * This is released under the MIT, see LICENSE for details
 *
-* @author Elizabeth M Smith <auroraeosrose@php.net>
-* @copyright Elizabeth M Smith (c) 2012
+* @author Elizabeth M Smith <auroraeosrose@gmail.com>
+* @copyright Elizabeth M Smith (c) 2012-2013
 * @link http://gtkforphp.net
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
-* @package g\generator
+* @package G\Generator
 * @subpackage lib
 */
 
@@ -92,7 +92,7 @@ abstract class Cli {
     public function logMessage($message) {
         if (empty($this->logfile)) {
             // logfile
-            $this->logfile = dirname(__FILE__) . '/install.log';
+            $this->logfile = __DIR__ . DIRECTORY_SEPARATOR . 'install.log';
             touch($this->logfile);
         }
         file_put_contents($this->logfile, $message . PHP_EOL, FILE_APPEND);

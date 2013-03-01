@@ -1,15 +1,15 @@
 <?php
 /**
-* extwriter.php - G\Generator\ExtWriter application class
+* extension.php - G\Generator\Extension application class
 *
 * This is released under the MIT, see LICENSE for details
 *
-* @author Elizabeth M Smith <auroraeosrose@php.net>
-* @copyright Elizabeth M Smith (c) 2012
+* @author Elizabeth M Smith <auroraeosrose@gmail.com>
+* @copyright Elizabeth M Smith (c) 2012-2013
 * @link http://gtkforphp.net
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
-* @package gig
+* @package G\Generator
 * @subpackage lib
 */
 
@@ -19,11 +19,12 @@
 namespace G\Generator;
 
 /**
-* ExtWriter - handles setup and running for the extension writer ggen tool
+* Extension - handles setup and running for the extension writing, updating, docing, etc
 *
 * uses command line variables and a configuration file to do generation of code
+* Expects G_GEN_LIBPATH to be defined
 */
-class ExtWriter extends Cli {
+class Extension extends Cli {
 
     /**
     * version string in major.minor.bug-dev/alpha/beta format
@@ -38,6 +39,8 @@ class ExtWriter extends Cli {
     * @return void
     */
     public function __construct($argv, $argc) {
+        $this->logfile = __DIR__ . DIRECTORY_SEPARATOR . 'ggen.log';
+
         parent::__construct($argv, $argc);
 
         $this->opt->setOptions(
@@ -47,11 +50,9 @@ class ExtWriter extends Cli {
                 array('v', 'verbose', 'Show version information'),
                 array('q', 'quiet', 'Suppress all output'),
 
-                array('l:', 'log:', 'Log to file provided --log=logfile'),
+                array('l', 'log', 'log to file, default is ggen.log'),
 
-                array('c', 'check', 'Lint check config and specification files'),
-                array('u', 'update', 'update the extension, do not overwrite existing files this is implicit if the location specified in the config is not empty'),
-                array('n', 'new', 'ignore existing files and create a new extension this is implicit if the location specified in the config is empty'),
+                array('n', 'new', 'Generate new extension code'),
             )
         );
     }
@@ -63,6 +64,7 @@ class ExtWriter extends Cli {
     */
     public function run() {
         $options = $this->opt->getOptions();
+
         $this->handleOptions($options);
 
         // get all our other parameters
@@ -174,18 +176,18 @@ class ExtWriter extends Cli {
         $this->printMessage('Loading configuration from ' . $path);
 
         // parser type detection
-        $ext = pathinfo ($filename, PATHINFO_EXTENSION);
+        $ext = $this->getConfig(pathinfo ($filename, PATHINFO_EXTENSION));
         $this->printMessage('Config detected as type ' . $ext, 2);
 
         // Parser for config should be in parsers/config/$ext.php
-        $parser = realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR . 'parsers' . DIRECTORY_SEPARATOR . 'config'
-                . DIRECTORY_SEPARATOR . strtolower($ext) . '.php';
-        $this->printMessage('Trying to load parser ' . $parser, 2);
+        $parser = G_GEN_LIBPATH . 'parsers' . DIRECTORY_SEPARATOR . 'config'
+                . DIRECTORY_SEPARATOR . $ext . '.php';
+        $this->printMessage('Trying to load config parser ' . $parser, 2);
         if (!file_exists($parser)) {
             trigger_error('Configuration parser for ' . $ext . ' could not be loaded', E_USER_ERROR);
         }
 
-        $class = 'G\Generator\ConfigParser\\' . ucfirst(strtolower($ext));
+        $class = 'G\Generator\Config\\' . ucfirst($ext);
         $this->printMessage('Trying to load class ' . $class, 2);
         include $parser;
         if (!class_exists($class)) {
@@ -207,7 +209,7 @@ class ExtWriter extends Cli {
 
         // parser type detection
         if (isset($config['specification']['type'])) {
-            $type = $config['specification']['type'];
+            $type = $this->getParser($config['specification']['type']);
         } else {
             trigger_error('Specification type missing from configuration file', E_USER_ERROR);
         }
@@ -215,14 +217,13 @@ class ExtWriter extends Cli {
         $this->printMessage('Specification detected as type ' . $type, 2);
 
         // Parser for spec should be in parsers/spec/$type.php
-        $parser = realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR . 'parsers' . DIRECTORY_SEPARATOR . 'spec'
-                . DIRECTORY_SEPARATOR . strtolower($type) . '.php';
+        $parser = G_GEN_LIBPATH . 'parsers' . DIRECTORY_SEPARATOR . 'spec'. DIRECTORY_SEPARATOR . $type . '.php';
         $this->printMessage('Trying to load parser ' . $parser, 2);
         if (!file_exists($parser)) {
             trigger_error('Specification parser for ' . $type . ' could not be loaded', E_USER_ERROR);
         }
 
-        $class = 'G\Generator\SpecParser\\' . ucfirst(strtolower($type));
+        $class = 'G\Generator\Spec\\' . ucfirst($type);
         $this->printMessage('Trying to load class ' . $class, 2);
         include $parser;
         if (!class_exists($class)) {
@@ -257,7 +258,43 @@ class ExtWriter extends Cli {
     */
     protected function showHeader() {
         if($this->messages > 0) {
-            echo 'ggen ' . self::VERSION . ', Copyright (c) 2012 Elizabeth M Smith', PHP_EOL, PHP_EOL;
+            echo 'ggen ' . self::VERSION . ', Copyright (c) 2012 - '. date('Y') . ' Elizabeth M Smith', PHP_EOL, PHP_EOL;
+        }
+    }
+
+    /**
+    * Gets a legal config type value
+    * supported types should be added here
+    *
+    * @return string
+    */
+    protected function getConfig($ext) {
+        switch($ext) {
+            case 'json':
+                return 'json';
+            case 'xml':
+                return 'xml';
+            case 'ini':
+            default:
+                return 'ini';
+        }
+    }
+
+    /**
+    * Gets a legal spec parser type
+    * supported types should be added here
+    *
+    * @return string
+    */
+    protected function getParser($ext) {
+        switch($ext) {
+            case 'gir':
+                return 'gir';
+            case 'gintrospection':
+                return 'gintrospection';
+            case 'peclgen':
+            default:
+                return 'peclgen';
         }
     }
 }

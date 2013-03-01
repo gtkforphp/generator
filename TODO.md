@@ -3,8 +3,8 @@
 ## Currently underway
 
 * Create a set of interfaces for how data should be returned
-* Create 3 config parsers (ini, php, xml)
-* Create 3 spec parsers (codegen_pecl/pecl_gen xml, gir xml, g\gen PHP format)
+* Create 3 config parsers (ini, json, xml)
+* Create 3 spec parsers (codegen_pecl/pecl_gen xml, gir xml, g\instrospection format)
 
 ## Feature list
 

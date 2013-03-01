@@ -4,12 +4,12 @@
 *
 * This is released under the MIT, see LICENSE for details
 *
-* @author Elizabeth M Smith <auroraeosrose@php.net>
-* @copyright Elizabeth M Smith (c) 2012
+* @author Elizabeth M Smith <auroraeosrose@gmail.com>
+* @copyright Elizabeth M Smith (c) 2012-2013
 * @link http://gtkforphp.net
 * @license http://www.opensource.org/licenses/mit-license.php MIT
 * @since Php 5.4.0
-* @package g\generator
+* @package G\Generator
 * @subpackage lib
 */
 
@@ -23,6 +23,12 @@ namespace G\Generator;
 * display along with argument parsing
 */
 class Getopt {
+
+    /**
+    * the currently running PHP script filename
+    * @var string
+    */
+    protected $filename;
 
     /**
     * have we parsed our args?
@@ -152,6 +158,11 @@ class Getopt {
         $argv = $this->rawArgv;
         $options = $this->options;
         $params = $argv;
+
+        // strip out currently running filename
+        $this->filename = $params[0];
+        unset($params[0]);
+
         foreach($options as $option => $value) {
             foreach($argv as $key => $chunk) {
                 $regex = '/^'. (isset($option[1]) ? '--' : '-') . $option . '/';
@@ -167,13 +178,29 @@ class Getopt {
     }
 
     /**
+     * Will parse if not parsed yet, will parameter if not parametered yet
+     * and returns resulting filename
+     *
+     * @return string
+     */
+    public function getFilename() {
+        if(!$this->parsed) {
+            $this->parseArgs();
+        }
+        if (!is_null($this->parameters)) {
+            $this->getParameters();
+        }
+        return $this->filename;
+    }
+
+    /**
      * generates a standard help message from options
      * set for parsing
      *
      * @return array
      */
     public function showHelp($option = ' <option>') {
-        $output = 'Usage: ' . $this->rawArgv[0] . $option . PHP_EOL;
+        $output = 'Usage: ' . basename($this->rawArgv[0]) . $option . PHP_EOL;
         $args = array();
         $longest = 0;
         $position = 0;
