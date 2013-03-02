@@ -95,7 +95,7 @@ class Extension extends Cli {
         $output = $this->loadOutput($config);
 
         // TODO: decide what to output here
-        $output->writeNewExtension($spec);
+        $output->writeNewExtension($spec->parse());
     }
 
     /**

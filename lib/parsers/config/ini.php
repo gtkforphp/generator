@@ -47,7 +47,12 @@ class Ini extends ArrayObject {
         if ($base === false) {
             trigger_error('Ini file ' . $this->filename . ' could not be parsed', E_USER_ERROR);
         }
+
         // TODO: merge with defaults
+        // TODO: check for missing items
+
+        // copy [specification][module] to [output][module]
+        $base['output']['module'] = $base['specification']['module'];
 
         parent::__construct($base);
     }

@@ -105,10 +105,9 @@ class Output {
     *
     * @return void
     */
-    public function writeNewExtension($spec) {
+    public function writeNewExtension($module) {
 
-        foreach($spec as $namespace) {
-        }
+        var_dump($module);
 
         /*
         $classes = array();

@@ -17,14 +17,16 @@
 * Namespace for the tool
 */
 namespace G\Generator\Spec;
+use G\Generator\Objects\Module;
+use G\Generator\Objects\Package;
+use G\Generator\Objects\Constant;
 use XMLReader;
-use Iterator;
 use SimpleXMLElement;
 
 /**
 * Uses xml format for Gobject Introspection to parse stuff
 */
-class Gir implements Iterator {
+class Gir {
 
     /**
     * gir file for the project
@@ -42,13 +44,12 @@ class Gir implements Iterator {
     protected $reader;
 
     /**
-     * Iteration implementation detail, do not use
-    *  @var string
-     */
-    private $itemName;
-    private $read;
-    private $counter = 0;
-    private $current;
+    * cache for name and version of php module/extension from config
+    *
+    * @var strings
+    */
+    protected $name;
+    protected $version;
 
     /**
     * Checks for the file existing and stores it
@@ -77,50 +78,76 @@ class Gir implements Iterator {
 
         $reader = $this->reader = new XMLReader();
         $reader->open($this->file);
+        $this->module = $config['module'];
+        $this->version = $config['version'];
     }
 
-    function rewind() {
-        $this->reader->open($this->file);
-        $this->counter = $this->read = 0;
-        $this->current = NULL;
-        $this->next();
-    }
-
-    function current() {
-        return $this->current;
-    }
-
-    function key() {
-        return $this->counter;
-    }
-
-    function next() {
-        if (!$this->itemName) {
-            $this->reader->read(); // root element?
-            do {
-                $this->reader->read(); // item
-                $this->itemName = $this->xmlReader->name;
-             
-            } while ($this->itemName === '#text' && $this->itemName);
+    /**
+    * Clean up reader, avoid gc complications
+    *
+    * @return void
+    */
+    public function __destruct() {
+        if($this->reader) {
+            $this->reader->close();
+            $this->reader = null;
         }
-         
-        if ($this->current) {
-            $this->reader->next($this->itemName);
-        }
-         
-        if ($element = $this->reader->readOuterXML()) {
-            $this->read += strlen($element);
-            $this->current = new SimpleXmlElement($element);
-         
-        } else {
-            $this->current = NULL;
-        }
-         
-        $this->counter++;
-        return $this->current;
     }
 
-    function valid() {
-        return $this->current !== NULL;
+    /**
+    * Returns an array? of information about the extension specification?
+    *
+    * @return void
+    */
+    public function parse() {
+        // we'll be using these a lot, aliasing it in makes it a wee bit faster
+        $reader = $this->reader;
+        $cache = $this->cache;
+
+        $module = new Module;
+        $module->name = $this->module;
+        $module->version = $this->version;
+
+        // Loop our data and fill our objects
+        while($reader->read()) {
+
+            // c:include element
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'c:include') {
+                $module->headers[] = $reader->getAttribute('name');
+            }
+
+            // include element - module deps
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'include') {
+                $module->dep[$reader->getAttribute('name')] = $reader->getAttribute('version');
+            }
+
+            // namespace element
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'namespace') {
+                $module->namespaces[] = $package = new Package;
+                $package->name = $reader->getAttribute('name');
+                $package->version = $reader->getAttribute('version');
+
+                // oddly enough, shared-library info is here in namespace, not in overall module
+                $temp = $reader->getAttribute('shared-library');
+                $temp = explode(',', $temp);
+                $module->libs += $temp;
+            }
+
+            // constant element
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'constant') {
+                $package->constant[] = $constant = new Constant;
+                $constant->name = $reader->getAttribute('name');
+                $constant->def = $reader->getAttribute('c:type');
+
+                do {
+                    if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
+                        $constant->type = $reader->getAttribute('c:type');
+                        break;
+                    }
+                } while($reader->read());
+            }
+        }
+
+        return $module;
     }
 }
