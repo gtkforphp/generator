@@ -41,4 +41,10 @@ class Package {
     * @var array
     */
     public $constants = array();
+
+    /**
+    * array of class objects
+    * @var array
+    */
+    public $classes = array();
 }

@@ -21,3 +21,4 @@ include G_GEN_LIBPATH . 'output.php';
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'module.php';
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'package.php';
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'constant.php';
+include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'class.php';

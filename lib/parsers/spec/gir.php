@@ -20,8 +20,8 @@ namespace G\Generator\Spec;
 use G\Generator\Objects\Module;
 use G\Generator\Objects\Package;
 use G\Generator\Objects\Constant;
+use G\Generator\Objects\Klass;
 use XMLReader;
-use SimpleXMLElement;
 
 /**
 * Uses xml format for Gobject Introspection to parse stuff
@@ -146,7 +146,14 @@ class Gir {
                     }
                 } while($reader->read());
             }
+
+            // Struct fake objects
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'record') {
+                $package->classes[] = $class = new Klass;
+                $class->name = $reader->getAttribute('name');
+            }
         }
+        var_dump($package->classes);
 
         return $module;
     }
