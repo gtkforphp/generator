@@ -17,6 +17,8 @@
 * Namespace for the tool
 */
 namespace G\Generator;
+use G\Generator\Extension;
+use G\Generator\Objects\Module;
 
 /**
 * Takes information about a module and writes it out using the template
@@ -25,79 +27,78 @@ namespace G\Generator;
 class Output {
 
     /**
-    * our repository
-    * @var object
-    */
-    protected $repository;
-
-    /**
-    * namespace to modularize
+    * cache year
     * @var string
     */
-    protected $namespace;
-
-    /**
-    * version to modularize
-    * @var string
-    */
-    protected $version;
-
-    /**
-    * module name
-    * @var string
-    */
-    protected $module;
-
-    /**
-    * authors
-    * @var array
-    */
-    protected $authors = array();
+    protected $year;
 
     /**
     * Checks for the extension and attempts to require the proper typelib
     *
     * @return void
     */
-    public function __construct($config) {
-
-        // module name
-        if (!isset($config['module'])) {
-           trigger_error('Module name missing in configuration file', E_USER_ERROR);
-        }
-        $this->module = $config['module'];
+    public function __construct($config, $configpath) {
 
         // template location
         if (!isset($config['templates'])) {
            trigger_error('Template location missing in configuration file', E_USER_ERROR);
         }
-        $templates = realpath($config['templates']);
-        if (!file_exists($templates)) {
-           $templates = realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR . 'templates'
-            . DIRECTORY_SEPARATOR . $config['templates'] . DIRECTORY_SEPARATOR;
-            if (!file_exists($templates)) {
-                trigger_error('Template ' . $templates . ' does not exist', E_USER_ERROR);
+
+        // is templates an absolute path?
+        if (!file_exists($config['templates'])) {
+            // not an absolute path, look in config directory
+            $temp1 = $configpath . DIRECTORY_SEPARATOR . $config['templates'];
+            if (!file_exists($temp1)) {
+                // still not a good path, look in shipped templates directory
+                $temp2 = G_GEN_LIBPATH . 'templates'
+                    . DIRECTORY_SEPARATOR . $config['templates'];
+                if (!file_exists($temp2)) {
+                    trigger_error('Templates not in ' . $config['templates'] . ' or ' . $temp1 . ' or ' . $temp2, E_USER_ERROR);
+                } else {
+                    $templates = $temp2;
+                }
+            } else {
+                $templates = $temp1;
             }
+        } else {
+            $templates = $config['templates'];
         }
-        $this->templates = $templates;
+        $this->templates = $templates . DIRECTORY_SEPARATOR;
 
         // output location
         if (!isset($config['location'])) {
            trigger_error('Output location missing in configuration file', E_USER_ERROR);
         }
-        $location = $config['location'];
+
+        // is location an absolute path?
+        if (!file_exists($config['location'])) {
+            // not an absolute path, look in config directory
+            $temp1 = $configpath . DIRECTORY_SEPARATOR . $config['location'];
+            if (!file_exists($temp1)) {
+                // still not a good path, look libpath?
+                $temp2 = G_GEN_LIBPATH . $config['location'];
+                if (!file_exists($temp2)) {
+                    trigger_error('No directory for writing in ' . $config['location'] . ' or ' . $temp1 . ' or ' . $temp2, E_USER_ERROR);
+                } else {
+                    $location = $temp2;
+                }
+            } else {
+                $location = $temp1;
+            }
+        } else {
+            $location = $config['location'];
+        }
 
         $this->deleteDir($location);
         mkdir($location);
-        $location = realpath($location);
+
         // for now we always generate new
         trigger_error('Output will write to ' . $location, E_USER_WARNING);
 
         $this->location = $location . DIRECTORY_SEPARATOR;
 
-        if (isset($config['authors'])) {
-           $this->authors = $config['authors'];
-        }
+        // we use a date everywhere
+        $this->year = date('Y');
     }
 
     /**
@@ -107,7 +108,7 @@ class Output {
     */
     public function writeNewExtension($module) {
 
-        var_dump($module);
+        $this->writeModuleFile($module);
 
         /*
         $classes = array();
@@ -160,13 +161,19 @@ class Output {
     *
     * @return void
     */
-    protected function writeModuleFile($classes) {
+    protected function writeModuleFile(Module $module) {
+        $vars = ['generator_version' => Extension::VERSION,
+                 'year' => $this->year,
+                 'classes' => array(),
+                 'authors' => $module->authors,
+                 'module' => $module->name,
+                 'module_uc' => strtoupper($module->name),
+                 'module_lc' => strtolower($module->name),
+                 'includes' => $module->headers];
 
-        return $this->generate(
-            array('generator_version' => \G\Generator\ExtWriter::VERSION,
-                  'classes' => $classes),
+        return $this->generate($vars,
             $this->templates . 'module.c.tpl',
-            $this->location . 'php_'. strtolower($this->module) . '.c');
+            $this->location . 'php_'. $vars['module_lc'] . '.c');
     }
 
     /**
@@ -188,38 +195,24 @@ class Output {
         rmdir($dir);
     }
 
-    /**
-    * Returns array of basic args that is needed in all templates
-    *
-    * @return array
-    */
-    protected function getGlobals() {
-        return array(
-                'authors' => $this->authors,
-                'module' => $this->module,
-                'module_lc' => strtolower($this->module),
-                'module_uc' => strtoupper($this->module),
-                'year' => date('Y'),
-                    );
-    }
-
 
     /**
-    * Generate the file
+    * Generate the file - note we use funny double underscored
+    * variable names to prevent collisions, we also extract
+    * with block overwrite on to keep from $this being overwritten
     *
     * @params array $vars to extract for template
     * @params string $template absolute path to template
     * @params string $filename absolute path to filename
     * @return boolean
     */
-    protected function generate($vars, $template, $filename) {
-        $vars += $this->getGlobals();
-        extract($vars);
+    protected function generate($__vars, $__template, $__filename) {
+        extract($__vars, EXTR_SKIP);
 
         ob_start();
-        include $template;
-        $file = ob_get_clean();
+        include $__template;
+        $__file = ob_get_clean();
 
-        return file_put_contents($filename, $file);
+        return file_put_contents($__filename, $__file);
     }
 }

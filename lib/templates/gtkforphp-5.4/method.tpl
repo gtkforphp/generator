@@ -6,6 +6,8 @@ PHP_METHOD(<?= $class?>, <?= $method?>)
 		return;
 	}
 	PHP_<?= $module_uc?>_RESTORE_ERRORS
+
+	<?= $symbol?>
 }
 /* }}} */
 

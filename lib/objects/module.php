@@ -36,6 +36,12 @@ class Module {
     public $version;
 
     /**
+    * name => email pairs of authors to add
+    * @var array
+    */
+    public $authors = array();
+
+    /**
     * module dependencies
     * @var string
     */

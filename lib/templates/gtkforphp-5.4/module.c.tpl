@@ -1,6 +1,17 @@
 <?php include 'header.tpl'?>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "php.h"
+#include "ext/standard/info.h"
+
 #include "php_<?= $module_lc?>.h"
+
+<?php foreach($includes as $file):?>
+#include <<?=$file?>>
+<?php endforeach?>
 
 /* {{{ PHP_MINIT_FUNCTION
  */

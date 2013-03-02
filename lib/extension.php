@@ -255,7 +255,7 @@ class Extension extends Cli {
             trigger_error('Writer output settings missing from configuration file', E_USER_ERROR);
         }
 
-        return new Output($config['output']);
+        return new Output($config['output'], $this->configpath);
     }
 
     /**
