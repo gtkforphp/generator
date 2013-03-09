@@ -116,8 +116,13 @@ class Gir {
         // Loop our data and fill our objects
         while($reader->read()) {
 
+            // package element - for pkg config
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'package') {
+                $module->pkgname = $reader->getAttribute('name');
+            }
+
             // c:include element
-            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'c:include') {
+            elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'c:include') {
                 $module->headers[] = $reader->getAttribute('name');
             }
 
@@ -152,6 +157,11 @@ class Gir {
                 } while($reader->read());
             }
 
+            // Unions
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'union' && $reader->isEmptyElement == false) {
+                $this->parseUnion();
+            }
+
             // Struct fake objects
             elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'record' && $reader->isEmptyElement == false) {
                 $package->classes[] = $this->parseStructClass();
@@ -173,14 +183,14 @@ class Gir {
         $class->name = $reader->getAttribute('name');
         $class->type = $reader->getAttribute('c:type');
         if($reader->getAttribute('disguised') == 1) {
-            $class->type .= '*';
+            //$class->type .= '*';
         }
 
         do {
             if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'function') {
                 // try to parse the function as a normal one, otherwise use it for a createobject handler
                 try {
-                    $class->methods[] = $this->parseFunctionAsMethod($class->name);
+                    $class->methods[] = $this->parseFunctionAsMethod($class);
                 } catch (CreateObjectHandlerException $e) {
                     $class->createHandler = $e->method->identifier;
                 }
@@ -216,8 +226,11 @@ class Gir {
         $method->identifier = $reader->getAttribute('c:identifier');
 
         do {
+// parameter handling goes here
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'parameter') {
+                $method->args[] = $reader->getAttribute('name');
             // this will get a doc node if it exists
-            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
                 $method->doc = $reader->readString();
             // this will ALWAYS stop our loop
             } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'method') {
@@ -226,7 +239,7 @@ class Gir {
         } while($reader->read());
 
         /* if the name of the method is ONLY free or destroy - this is a free */
-        if ($method->name === 'free' || $method->name === 'destroy') {
+        if (empty($method->args) && $method->name === 'free' || $method->name === 'destroy') {
             $e = new FreeObjectHandlerException();
             $e->method = $method;
             throw $e;
@@ -240,7 +253,7 @@ class Gir {
     *
     * @return void
     */
-    protected function parseFunctionAsMethod($classname) {
+    protected function parseFunctionAsMethod(Klass $class) {
         $reader = $this->reader; // alias in local
 
         $method = new Method;
@@ -255,9 +268,13 @@ class Gir {
                     // if type
                     if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
                         $method->returnValue = $reader->getAttribute('c:type');
-                        if($classname === $reader->getAttribute('name')) {
+                        // constructor guessing - new, alloc
+                        if($class->hasConstructor == false && $class->name === $reader->getAttribute('name') &&
+                           (stripos($method->name, 'new') === 0 ||
+                            stripos($method->name, 'alloc') === 0)) {
                             $method->isConstructor = true;
                             $method->name = '__construct';
+                            $class->hasConstructor = true;
                         }
                     // append return value docs to method docs
                      } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
@@ -289,6 +306,25 @@ class Gir {
         }
 
         return $method;
+    }
+
+    /**
+    * I have no idea what I'm going to do with unions yet! but I need
+    * to swallow them since they have records inside (silly xml)
+    *
+    * @return void
+    */
+    protected function parseUnion() {
+        $reader = $this->reader; // alias in local
+
+        do {
+            // this will ALWAYS stop our loop
+            if($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'union') {
+                break;
+            }
+        } while($reader->read());
+
+        return;
     }
 
     /**

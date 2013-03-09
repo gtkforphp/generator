@@ -6,7 +6,7 @@ static void <?= $module_lc?>_<?= $class_lc?>_object_free(void *object TSRMLS_DC)
 	zend_object_std_dtor(&<?= $class_lc?>_object->std TSRMLS_CC);
 	<?= $class_lc?>_object->is_constructed = FALSE;
 <?php if(!empty($class->freeHandler)):?>
-	<?= $class->freeHandler?>(*<?= $class_lc?>_object->data);
+	<?= $class->freeHandler?>(<?= $class_lc?>_object->data);
 <?php else:?>
 	<?= $class_lc?>_object->data = NULL;
 <?php endif?>
@@ -25,7 +25,7 @@ static zend_object_value <?= $module_lc?>_<?= $class_lc?>_object_create(zend_cla
 	zend_object_std_init((zend_object *) object, ce TSRMLS_CC);
 	object->is_constructed = FALSE;
 <?php if(!empty($class->createHandler)):?>
-	object->data = &<?= $class->createHandler?>();
+	object->data = <?= $class->createHandler?>();
 <?php else:?>
 	object->data = NULL;
 <?php endif?>

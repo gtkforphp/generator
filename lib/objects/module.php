@@ -60,6 +60,12 @@ class Module {
     public $libs = array();
 
     /**
+    * name to pass to pkg config
+    * @var string
+    */
+    public $pkgname;
+
+    /**
     * array of namespaces (package objects)
     * @var array
     */

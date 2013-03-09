@@ -1,5 +1,11 @@
 <?php include 'header.tpl'?>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "php.h"
+
 #include "php_<?= $module_lc?>.h"
 #include "php_<?= $module_lc?>_private.h"
 
@@ -44,7 +50,7 @@ struct _<?= $module_lc?>_<?= $class_lc?>_object {
 /* {{{ class methods */
 static const zend_function_entry <?= $module_lc?>_<?= $class_lc?>_methods[] = {
 <?php foreach($class->methods as $method):?>
-	PHP_ME(<?= $namespace?>\<?= $class->name?>, <?= $method->name?>, arg_<?= $class_lc?>_<?= strtolower($method->name)?>, ZEND_ACC_PUBLIC<?= $method->isConstructor ? ' | ZEND_ACC_CTR' : '' ?>)
+	PHP_ME(<?= $namespace?>_<?= $class->name?>, <?= $method->name?>, arg_<?= $class_lc?>_<?= strtolower($method->name)?>, ZEND_ACC_PUBLIC<?= $method->isConstructor ? ' | ZEND_ACC_CTOR' : '' ?>)
 <?php unset($method); endforeach?>
 	ZEND_FE_END
 };
@@ -54,7 +60,7 @@ static const zend_function_entry <?= $module_lc?>_<?= $class_lc?>_methods[] = {
 PHP_MINIT_FUNCTION(<?= $module_lc?>_<?= $class_lc?>)
 {
 	zend_class_entry ce;
-	INIT_NS_CLASS_ENTRY(ce, <?= $module_uc?>_NAMESPACE, "<?= $class->name?>"), <?= $module_lc?>_<?= $class_lc?>_methods);
+	INIT_NS_CLASS_ENTRY(ce, <?= $module_uc?>_NAMESPACE, "<?= $class->name?>", <?= $module_lc?>_<?= $class_lc?>_methods);
 	ce_<?= $module_lc?>_<?= $class_lc?> = zend_register_internal_class(&ce TSRMLS_CC);
 
 	ce_<?= $module_lc?>_<?= $class_lc?>->create_object = <?= $module_lc?>_<?= $class_lc?>_object_create;

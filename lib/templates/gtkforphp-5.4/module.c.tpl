@@ -9,10 +9,6 @@
 
 #include "php_<?= $module_lc?>.h"
 
-<?php foreach($module->headers as $file):?>
-#include <<?=$file?>>
-<?php unset($file); endforeach?>
-
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(<?= $module_lc?>)

@@ -3,7 +3,7 @@
     <?= $class->doc?> 
 <?php endif?>
 */
-PHP_METHOD(<?= $namespace?>\<?= $class->name?>, <?= $method->name?>)
+PHP_METHOD(<?= $namespace?>_<?= $class->name?>, <?= $method->name?>)
 {
 	PHP_<?= $module_uc?>_EXCEPTIONS
 <?php if(!empty($method->args)):?>

@@ -48,6 +48,12 @@ class Klass {
     public $methods = array();
 
     /**
+    * flag if the class has a __construct already
+    * @var bool
+    */
+    public $hasConstructor = false;
+
+    /**
     * a C identifier used to initialize the c data stored in the class struct
     * @var string
     */

@@ -45,6 +45,12 @@ class Output {
     protected $templates;
 
     /**
+    * all files to be compiled
+    * @var array
+    */
+    protected $files = array();
+
+    /**
     * Checks for the extension and attempts to require the proper typelib
     *
     * @return void
@@ -120,9 +126,6 @@ class Output {
         // globals from module
         $this->setGlobals($module);
 
-        // main module file
-        $this->writeModuleFile($module);
-
         // write out class files
         foreach($module->namespaces as $namespace) {
             foreach($namespace->classes as $class) {
@@ -130,17 +133,53 @@ class Output {
             }
         }
 
-        /*
-        $classes = array();
+        // main module file
+        $this->writeModuleFile($module);
 
-        // check for enums
-        if (isset($spec['enums'])) {
-            $this->writeEnumFile($spec['enums']);
-            $classes[] = 'Enums';
+        // header files
+        $this->writeHeaderFiles($module);
+
+        // autotools
+        $this->writeConfig($module);
+    }
+
+    /**
+    * config.w32 and config.m4 files
+    *
+    * @return void
+    */
+    protected function writeConfig(Module $module) {
+        return $this->generate(['files' => $this->files,
+                                'pkgname' => $module->pkgname,
+                                ],
+                        $this->templates . 'config.m4',
+                        $filename = $this->location . 'config.m4');
+    }
+
+    /**
+    * php_$module.h and php_$module_private.h
+    *
+    * @return void
+    */
+    protected function writeHeaderFiles(Module $module) {
+        $objects = array();
+
+        foreach($module->namespaces as $namespace) {
+            foreach($namespace->classes as $class) {
+                $objects[] = strtolower($module->name) . '_' . strtolower($class->name) . '_object';
+            }
         }
 
-        // finally write out module
-        $this->writeModuleFile($classes); */
+        $this->generate(['structs' => $objects,
+                        'headers' => $module->headers,
+                                ],
+                        $this->templates . 'php_private.h.tpl',
+                        $filename = $this->location . 'php_' . strtolower($module->name) . '_private.h');
+
+        return $this->generate(['version' => $module->version,
+                                'namespace' => $module->namespaces[0]->name],
+                        $this->templates . 'php.h.tpl',
+                        $filename = $this->location . 'php_' . strtolower($module->name) . '.h');
     }
 
     /**
@@ -153,6 +192,8 @@ class Output {
                  'class_lc' => strtolower($class->name),
                  'namespace' => $namespace,
                  ];
+
+        $this->files[] = $vars['class_lc']. '.c';
 
         return $this->generate($vars,
                         $this->templates . 'class.c.tpl',
@@ -178,6 +219,7 @@ class Output {
     protected function writeModuleFile(Module $module) {
         $vars = ['generator_version' => Extension::VERSION,
                  'module' => $module];
+        $this->files[] = 'php_'. strtolower($module->name) . '.c';
 
         return $this->generate($vars,
             $this->templates . 'module.c.tpl',
