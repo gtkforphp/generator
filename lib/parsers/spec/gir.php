@@ -21,7 +21,9 @@ use G\Generator\Objects\Module;
 use G\Generator\Objects\Package;
 use G\Generator\Objects\Constant;
 use G\Generator\Objects\Klass;
+use G\Generator\Objects\Method;
 use XMLReader;
+use Exception;
 
 /**
 * Uses xml format for Gobject Introspection to parse stuff
@@ -50,6 +52,7 @@ class Gir {
     */
     protected $name;
     protected $version;
+    protected $authors;
 
     /**
     * Checks for the file existing and stores it
@@ -80,6 +83,7 @@ class Gir {
         $reader->open($this->file);
         $this->module = $config['module'];
         $this->version = $config['version'];
+        $this->authors = $config['authors'];
     }
 
     /**
@@ -95,7 +99,7 @@ class Gir {
     }
 
     /**
-    * Returns an array? of information about the extension specification?
+    * Returns an object of information about the extension specification
     *
     * @return void
     */
@@ -107,6 +111,7 @@ class Gir {
         $module = new Module;
         $module->name = $this->module;
         $module->version = $this->version;
+        $module->authors = $this->authors;
 
         // Loop our data and fill our objects
         while($reader->read()) {
@@ -148,13 +153,168 @@ class Gir {
             }
 
             // Struct fake objects
-            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'record') {
-                $package->classes[] = $class = new Klass;
-                $class->name = $reader->getAttribute('name');
+            elseif ($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'record' && $reader->isEmptyElement == false) {
+                $package->classes[] = $this->parseStructClass();
             }
         }
-        var_dump($package->classes);
 
         return $module;
     }
+
+    /**
+    * Parse through 
+    *
+    * @return void
+    */
+    protected function parseStructClass() {
+        $reader = $this->reader; // alias in local
+
+        $class = new Klass;
+        $class->name = $reader->getAttribute('name');
+        $class->type = $reader->getAttribute('c:type');
+        if($reader->getAttribute('disguised') == 1) {
+            $class->type .= '*';
+        }
+
+        do {
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'function') {
+                // try to parse the function as a normal one, otherwise use it for a createobject handler
+                try {
+                    $class->methods[] = $this->parseFunctionAsMethod($class->name);
+                } catch (CreateObjectHandlerException $e) {
+                    $class->createHandler = $e->method->identifier;
+                }
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'method') {
+                // try to parse the function as a normal one, otherwise use it for a freeobject handler
+                try {
+                    $class->methods[] = $this->parseMethod($class->name);
+                } catch (FreeObjectHandlerException $e) {
+                    $class->freeHandler = $e->method->identifier;
+                }
+            // this will get a doc node if it exists
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                $class->doc = $reader->readString();
+            // this will ALWAYS stop our loop
+            } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'record') {
+                break;
+            }
+        } while($reader->read());
+
+        return $class;
+    }
+
+    /**
+    * Grabs methods and their associated data
+    *
+    * @return void
+    */
+    protected function parseMethod() {
+        $reader = $this->reader; // alias in local
+
+        $method = new Method;
+        $method->name = $this->mangleMethodName($reader->getAttribute('name'));
+        $method->identifier = $reader->getAttribute('c:identifier');
+
+        do {
+            // this will get a doc node if it exists
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                $method->doc = $reader->readString();
+            // this will ALWAYS stop our loop
+            } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'method') {
+                break;
+            }
+        } while($reader->read());
+
+        /* if the name of the method is ONLY free or destroy - this is a free */
+        if ($method->name === 'free' || $method->name === 'destroy') {
+            $e = new FreeObjectHandlerException();
+            $e->method = $method;
+            throw $e;
+        }
+
+        return $method;
+    }
+
+    /**
+    * Functions might really be methods - which is annoying
+    *
+    * @return void
+    */
+    protected function parseFunctionAsMethod($classname) {
+        $reader = $this->reader; // alias in local
+
+        $method = new Method;
+        $method->name = $this->mangleMethodName($reader->getAttribute('name'));
+        $method->identifier = $reader->getAttribute('c:identifier');
+
+        do {
+            // if return-type name == the class name this is a constructor
+             if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'return-value') {
+
+                do {
+                    // if type
+                    if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
+                        $method->returnValue = $reader->getAttribute('c:type');
+                        if($classname === $reader->getAttribute('name')) {
+                            $method->isConstructor = true;
+                            $method->name = '__construct';
+                        }
+                    // append return value docs to method docs
+                     } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                        $method->doc .= $reader->readString();
+                    // this will ALWAYS stop our loop
+                    } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'return-value') {
+                        break;
+                    }
+                } while($reader->read());
+            // parameter handling goes here
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'parameter') {
+                $method->args[] = $reader->getAttribute('name');
+            // this will get a doc node if it exists
+             } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                $method->doc = $reader->readString();
+            // this will ALWAYS stop our loop
+            } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'function') {
+                break;
+            }
+        } while($reader->read());
+
+        /* There is a special case here, if the method is a constructor, and the constructor takes no arguments
+         * then we want the construct to happen in the create object handler instead
+         */
+        if ($method->isConstructor && empty($method->args)) {
+            $e = new CreateObjectHandlerException();
+            $e->method = $method;
+            throw $e;
+        }
+
+        return $method;
+    }
+
+    /**
+    * mangle glib/gobject/gtk method names so instead of blah_blah they are blahBlah
+    *
+    * @return string
+    */
+    protected function mangleMethodName($name) {
+        // explode on _
+        $parts = explode('_', $name);
+        // beginning of name is lowercase
+        $name = strtolower(array_shift($parts));
+        // if our parts count is now 0, return
+        if(count($parts) < 1) {
+            return $name;
+        }
+        // strtolower the rest
+        $parts = array_map('strtolower', $parts);
+        // camelcase it
+        $parts = array_map('ucfirst', $parts);
+        return $name . implode($parts);
+    }
 }
+
+/**
+ * Custom Exceptions used to tell if function is really cdata manipulator
+ */
+class CreateObjectHandlerException extends Exception {}
+class FreeObjectHandlerException extends Exception {}

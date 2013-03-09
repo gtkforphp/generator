@@ -1,6 +1,6 @@
 <?php
 /**
-* class.php - G\Generator\Klass
+* method.php - G\Generator\Method
 *
 * This is released under the MIT, see LICENSE for details
 *
@@ -19,9 +19,15 @@
 namespace G\Generator\Objects;
 
 /**
-* Like namespace, class is reserved (sigh) - let's spell it funny!
+* Method oddly enough is not reserved
 */
-class Klass {
+class Method {
+
+    /**
+    * is this method the constructor?
+    * @var bool
+    */
+    public $isConstructor = false;
 
     /**
     * constant name
@@ -30,32 +36,26 @@ class Klass {
     public $name;
 
     /**
-    * datatype for storage in a struct
+    * c identifier for the method to use
     * @var string
     */
-    public $type;
+    public $identifier;
 
     /**
-    * documentation to throw into the proto
+    * documentation for the method
     * @var string
     */
     public $doc;
 
     /**
-    * Methods for class
+    * by default this is null (void)
+    * @var string
+    */
+    public $returnValue;
+
+    /**
+    * arguments for the method
     * @var array
     */
-    public $methods = array();
-
-    /**
-    * a C identifier used to initialize the c data stored in the class struct
-    * @var string
-    */
-    public $createHandler;
-
-    /**
-    * a C identifier used to free the c data stored in the class struct
-    * @var string
-    */
-    public $freeHandler;
+    public $args = array();
 }

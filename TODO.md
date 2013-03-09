@@ -23,3 +23,8 @@
 * scanner app
 * docs in formats
 * tests in formats
+
+## current notes
+
+* need to handle deps in module file
+* need to handle ignores and additions

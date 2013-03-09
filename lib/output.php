@@ -27,10 +27,22 @@ use G\Generator\Objects\Module;
 class Output {
 
     /**
-    * cache year
+    * cache globals
     * @var string
     */
-    protected $year;
+    protected $globals = array();
+
+    /**
+    * our write location
+    * @var string
+    */
+    protected $location;
+
+    /**
+    * our templates location
+    * @var string
+    */
+    protected $templates;
 
     /**
     * Checks for the extension and attempts to require the proper typelib
@@ -96,9 +108,6 @@ class Output {
         trigger_error('Output will write to ' . $location, E_USER_WARNING);
 
         $this->location = $location . DIRECTORY_SEPARATOR;
-
-        // we use a date everywhere
-        $this->year = date('Y');
     }
 
     /**
@@ -108,15 +117,21 @@ class Output {
     */
     public function writeNewExtension($module) {
 
+        // globals from module
+        $this->setGlobals($module);
+
+        // main module file
         $this->writeModuleFile($module);
+
+        // write out class files
+        foreach($module->namespaces as $namespace) {
+            foreach($namespace->classes as $class) {
+                $this->writeClassFile($class, $namespace->name);
+            }
+        }
 
         /*
         $classes = array();
-
-        foreach($spec['classes'] as $name => $info) {
-            $this->writeClassFile($name, $info);
-            $classes[] = $name;
-        }
 
         // check for enums
         if (isset($spec['enums'])) {
@@ -133,16 +148,15 @@ class Output {
     *
     * @return void
     */
-    protected function writeClassFile($name, $info) {
-        $vars = array();
-
-        $vars['class'] = $name;
-        $vars['class_lc'] = strtolower($name);
-        $vars['methods'] = $info['methods'];
+    protected function writeClassFile(Klass $class, $namespace) {
+        $vars = ['class' => $class,
+                 'class_lc' => strtolower($class->name),
+                 'namespace' => $namespace,
+                 ];
 
         return $this->generate($vars,
                         $this->templates . 'class.c.tpl',
-                        $this->location . strtolower($name) . '.c');
+                        $this->location . $vars['class_lc']. '.c');
     }
 
     /**
@@ -163,17 +177,27 @@ class Output {
     */
     protected function writeModuleFile(Module $module) {
         $vars = ['generator_version' => Extension::VERSION,
-                 'year' => $this->year,
-                 'classes' => array(),
-                 'authors' => $module->authors,
-                 'module' => $module->name,
-                 'module_uc' => strtoupper($module->name),
-                 'module_lc' => strtolower($module->name),
-                 'includes' => $module->headers];
+                 'module' => $module];
 
         return $this->generate($vars,
             $this->templates . 'module.c.tpl',
-            $this->location . 'php_'. $vars['module_lc'] . '.c');
+            $this->location . 'php_'. strtolower($module->name) . '.c');
+    }
+
+    /**
+    * Set our global variables sent to every template
+    *
+    * @return void
+    */
+    protected function setGlobals(Module $module) {
+        // we use a date everywhere
+        $this->globals['year'] = date('Y');
+
+        // module info
+        $this->globals['authors'] =  $module->authors;
+        $this->globals['module_name'] = $module->name;
+        $this->globals['module_uc'] = strtoupper($module->name);
+        $this->globals['module_lc'] = strtolower($module->name);
     }
 
     /**
@@ -207,6 +231,7 @@ class Output {
     * @return boolean
     */
     protected function generate($__vars, $__template, $__filename) {
+        $__vars = $this->globals + $__vars;
         extract($__vars, EXTR_SKIP);
 
         ob_start();

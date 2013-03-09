@@ -64,4 +64,21 @@ class Module {
     * @var array
     */
     public $namespaces = array();
+
+    /**
+    * Get a flattened array of all classes from all namespaces
+    *
+    * @return array
+    */
+    public function getClassNames() {
+        $array = array();
+        foreach($this->namespaces as $namespace) {
+            $temp = array();
+            foreach($namespace->classes as $class){
+                $temp[] = strtolower($class->name);
+            }
+            $array += $temp;
+        }
+        return $array;
+    }
 }
