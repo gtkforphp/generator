@@ -22,6 +22,8 @@ use G\Generator\Objects\Package;
 use G\Generator\Objects\Constant;
 use G\Generator\Objects\Klass;
 use G\Generator\Objects\Method;
+use G\Generator\Objects\Param;
+use G\Generator\Objects\RetVal;
 use XMLReader;
 use Exception;
 
@@ -224,11 +226,17 @@ class Gir {
         $method = new Method;
         $method->name = $this->mangleMethodName($reader->getAttribute('name'));
         $method->identifier = $reader->getAttribute('c:identifier');
+        if($reader->getAttribute('throws')) {
+            $method->throws = 1;
+        }
 
         do {
-// parameter handling goes here
+            // parameter handling goes here
             if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'parameter') {
-                $method->args[] = $reader->getAttribute('name');
+                $method->args[] = $this->parseParameter();
+            // if return-type name == the class name this is a constructor
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'return-value') {
+                $method->returnValue = $this->parseReturn();
             // this will get a doc node if it exists
             } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
                 $method->doc = $reader->readString();
@@ -263,30 +271,18 @@ class Gir {
         do {
             // if return-type name == the class name this is a constructor
              if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'return-value') {
-
-                do {
-                    // if type
-                    if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
-                        $method->returnValue = $reader->getAttribute('c:type');
-                        // constructor guessing - new, alloc
-                        if($class->hasConstructor == false && $class->name === $reader->getAttribute('name') &&
-                           (stripos($method->name, 'new') === 0 ||
-                            stripos($method->name, 'alloc') === 0)) {
-                            $method->isConstructor = true;
-                            $method->name = '__construct';
-                            $class->hasConstructor = true;
-                        }
-                    // append return value docs to method docs
-                     } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
-                        $method->doc .= $reader->readString();
-                    // this will ALWAYS stop our loop
-                    } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'return-value') {
-                        break;
-                    }
-                } while($reader->read());
+                $method->returnValue = $this->parseReturn();
+                // constructor guessing - new, alloc
+                if($class->hasConstructor == false && $class->name === $method->returnValue->type &&
+                   (stripos($method->name, 'new') === 0 ||
+                    stripos($method->name, 'alloc') === 0)) {
+                    $method->isConstructor = true;
+                    $method->name = '__construct';
+                    $class->hasConstructor = true;
+                }
             // parameter handling goes here
             } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'parameter') {
-                $method->args[] = $reader->getAttribute('name');
+                $method->args[] = $this->parseParameter();
             // this will get a doc node if it exists
              } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
                 $method->doc = $reader->readString();
@@ -306,6 +302,82 @@ class Gir {
         }
 
         return $method;
+    }
+
+    /**
+    * Functions might really be methods - which is annoying
+    *
+    * @return void
+    */
+    protected function parseParameter() {
+        $reader = $this->reader; // alias in local
+
+        $param = new Param;
+        $param->name = $reader->getAttribute('name');
+        $param->transfer = $reader->getAttribute('transfer-ownership');
+        // get rid of "floating" transfer
+        if($param->transfer == 'floating') {
+            $param->transfer == 'none';
+        }
+        if($dir = $reader->getAttribute('direction')) {
+            $param->direction = $dir;
+        }
+
+        do {
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'array') {
+                $param->container = $reader->getAttribute('c:type');
+            } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
+                $param->nativeType = $reader->getAttribute('c:type');
+                $param->type = $reader->getAttribute('name');
+                $this->mapType($param);
+             } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                $param->doc = $reader->readString();
+            // this will ALWAYS stop our loop
+            } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'parameter') {
+                break;
+            }
+        } while($reader->read());
+
+        return $param;
+    }
+
+    /**
+    * Return value information
+    *
+    * @return void
+    */
+    protected function parseReturn() {
+        $reader = $this->reader; // alias in local
+
+        $retval = new RetVal;
+
+        do {
+            if($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'type') {
+                $retval->nativeType = $reader->getAttribute('c:type');
+                $retval->type = $reader->getAttribute('name');
+            /*} elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'array') {
+                $retval->nativeType = $reader->getAttribute('c:type');
+                $retval->type = $reader->getAttribute('name');
+                do {
+                    if($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'array') {
+                        break;
+                    }
+                } while($reader->read()); */
+             } elseif($reader->nodeType == XMLReader::ELEMENT && $reader->name == 'doc') {
+                $retval->doc .= $reader->readString();
+            // this will ALWAYS stop our loop
+            } elseif($reader->nodeType == XMLReader::END_ELEMENT && $reader->name == 'return-value') {
+                break;
+            }
+        } while($reader->read());
+
+        if($retval->type == 'none' && $retval->nativeType == 'void') {
+            return null;
+        }
+
+        $this->mapReturn($retval);
+
+        return $retval;
     }
 
     /**
@@ -347,6 +419,172 @@ class Gir {
         $parts = array_map('ucfirst', $parts);
         return $name . implode($parts);
     }
+
+    /**
+    * Map a glib/gobject type to a PHP type for param
+    *
+    * @return array?
+    */
+    protected function mapType(Param $param) {
+        switch($param->type) {
+            case 'gboolean':
+                $param->zppSpec = 'b';
+                $param->zppType = 'zend_bool';
+                $param->ztype = 'bool';
+                return;
+            case 'guint':
+            case 'guint64': // NOTE: may need to do this as a string!
+            case 'glong':
+            case 'gsize':
+            case 'guint8':
+            case 'gssize':
+            case 'gint64':
+            case 'guint32':
+            case 'gdouble':
+            case 'gulong':
+            case 'gint32':
+            case 'gint':
+                $param->zppSpec = 'l';
+                $param->zppType = 'long';
+                $param->ztype = 'int';
+                return;
+            case 'utf8':
+            case 'gchar':
+                $param->zppSpec = 's';
+                $param->zppType = ['char *', 'int'];
+                return;
+            case 'gpointer':
+                echo "have no idea what to do with gpointer omg\n";
+                return;
+            case 'DestroyNotify':
+            case 'CompareFunc':
+            case 'CompareDataFunc':
+            case 'HRFunc':
+            case 'HFunc':
+            case 'HashFunc':
+            case 'EqualFunc':
+            case 'HookFindFunc':
+            case 'HookCompareFunc':
+            case 'HookMarshaller':
+            case 'HookCheckMarshaller':
+            case 'Func':
+            case 'SourceFuncs':
+            case 'SourceFunc':
+            case 'PollFunc':
+            case 'NodeForeachFunc':
+            case 'CopyFunc':
+            case 'NodeTraverseFunc':
+            case 'ThreadFunc':
+            case 'TranslateFunc':
+            case 'OptionErrorFunc':
+            case 'OptionParseFunc':
+            case 'RegexEvalCallback':
+            case 'SequenceIterCompareFunc':
+            case 'SourceCallbackFuncs':
+            case 'TraverseFunc':
+            case 'Variant':
+                echo "I believe this is a callback - that'll be fun\n";
+                return;
+            case 'TimeVal':
+            case 'Bytes':
+            case 'ChecksumType':
+            case 'Mutex':
+            case 'Date':
+            case 'DateDay':
+            case 'DateMonth':
+            case 'DateYear':
+            case 'Time':
+            case 'DateWeekday':
+            case 'TimeSpan':
+            case 'DateTime':
+            case 'TimeZone':
+            case 'Quark':
+            case 'GLib.HashTable':
+            case 'Hook':
+            case 'HookList':
+            case 'String':
+            case 'GLib.List':
+            case 'MarkupParser':
+            case 'Node':
+            case 'OptionGroup':
+            case 'OptionEntry':
+            case 'PatternSpec':
+            case 'MatchInfo':
+            case 'GLib.SList':
+            case 'ScannerConfig':
+            case 'SequenceIter':
+            case 'Source':
+            case 'MainContext':
+            case 'TestCase':
+            case 'TestSuite':
+            case 'TrashStack':
+                echo "and I think this is an object\n";
+                return;
+            case 'filename':
+                echo "no clue at all what THIS is\n";
+                return;
+            case 'gunichar':
+                echo "hmm, this one is weird\n";
+                return;
+            case 'SeekType':
+            case 'IOFlags':
+            case 'KeyFileFlags':
+            case 'PollFD':
+            case 'Cond':
+            case 'MarkupParseFlags':
+            case 'TraverseFlags':
+            case 'TraverseType':
+            case 'RegexMatchFlags':
+            case 'RegexCompileFlags':
+            case 'TokenType':
+            case 'TimeType':
+            case 'VariantType':
+                echo "this might be an enum!\n";
+                return;
+            case 'va_list':
+                echo "this one is going to be fun *\n";
+                return;
+            default:
+                throw new UnknownTypeException($param->type . $param->identifer);
+        }
+    }
+
+    /**
+    * Map a glib/gobject type to a PHP type for return
+    *
+    * @return array?
+    */
+    protected function mapReturn(Retval $retval) {
+        switch($retval->type) {
+            case 'gboolean':
+                $retval->ztype = 'bool';
+                return;
+            case 'guint':
+            case 'guint64': // NOTE: may need to do this as a string!
+            case 'glong':
+            case 'gsize':
+            case 'guint8':
+            case 'gssize':
+            case 'gint64':
+            case 'guint32':
+            case 'gdouble':
+            case 'gulong':
+            case 'gint32':
+            case 'gint':
+                $retval->ztype = 'int';
+                return;
+            case 'utf8':
+            case 'gchar':
+                $retval->ztype = 'string';
+                return;
+            case 'gpointer':
+                echo "have no idea what to do with gpointer omg\n";
+                return;
+            default:
+                //var_dump($retval);
+                //throw new UnknownTypeException($retval->type . $retval->nativeType);
+        }
+    }
 }
 
 /**
@@ -354,3 +592,4 @@ class Gir {
  */
 class CreateObjectHandlerException extends Exception {}
 class FreeObjectHandlerException extends Exception {}
+class UnknownTypeException extends Exception {}

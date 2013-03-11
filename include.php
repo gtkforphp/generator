@@ -19,7 +19,9 @@ include G_GEN_LIBPATH . 'extension.php';
 include G_GEN_LIBPATH . 'output.php';
 
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'module.php';
-include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'package.php';
+include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'package.php'; // namespace
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'constant.php';
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'class.php';
 include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'method.php';
+include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'param.php';
+include G_GEN_LIBPATH . 'objects' . DIRECTORY_SEPARATOR . 'retval.php';

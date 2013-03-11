@@ -54,8 +54,89 @@ class Method {
     public $returnValue;
 
     /**
+    * does this throw an error? (need a gerror?)
+    * @var bool
+    */
+    public $throws = false;
+
+    /**
     * arguments for the method
     * @var array
     */
     public $args = array();
+
+    /**
+    * Get the method proto as a string
+    *
+    * @return string
+    */
+    public function getProto() {
+        $proto = array();
+        foreach($this->args as $arg) {
+            if($arg->direction != 'out') {
+                $proto[] = $arg->ztype . ' ' . $arg->name;
+            }
+        }
+        return implode(', ', $proto);
+    }
+
+    /**
+    * Get the method proto as a string
+    *
+    * @return bool
+    */
+    public function hasParams() {
+        if(empty($this->args)) {
+            return false;
+        }
+        foreach($this->args as $arg) {
+            if($arg->direction != 'out') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+    * Get the ZPP spec as a string
+    *
+    * @return string
+    */
+    public function getZppSpec() {
+        $spec = array();
+        foreach($this->args as $arg) {
+            if($arg->direction != 'out') {
+                $spec[] = $arg->zppSpec;
+            }
+        }
+        return implode('', $spec);
+    }
+
+    /**
+    * Get the ZPP args as a string
+    *
+    * @return string
+    */
+    public function getZppArgs() {
+        $args = array();
+        foreach($this->args as $arg) {
+            if($arg->direction != 'out') {
+                $args[] ='&' . $arg->name;
+            }
+        }
+        return $args;
+    }
+
+    /**
+    * Get the args for the call
+    *
+    * @return string
+    */
+    public function getArgs() {
+        $args = array();
+        foreach($this->args as $arg) {
+            $args[] ='&' . $arg->name;
+        }
+        return implode(', ', $args);
+    }
 }
